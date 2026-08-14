@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useRef, KeyboardEvent } from "react";
+import { useCallback, useState, useRef, useEffect, KeyboardEvent } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InputTab } from "@/lib/types";
 import TextTab from "./tabs/TextTab";
@@ -92,10 +92,16 @@ interface InputCardProps {
   onTabChange: (tab: InputTab) => void;
   onSubmit: (tab: InputTab, data: { text?: string; url?: string; file?: File }) => void;
   loading: boolean;
+  injectedText?: string; // set by ExampleChips to pre-fill the text tab
 }
 
-export default function InputCard({ activeTab, onTabChange, onSubmit, loading }: InputCardProps) {
+export default function InputCard({ activeTab, onTabChange, onSubmit, loading, injectedText }: InputCardProps) {
   const [text,           setText]           = useState("");
+
+  // When a parent injects example text, update local state
+  useEffect(() => {
+    if (injectedText !== undefined) setText(injectedText);
+  }, [injectedText]);
   const [articleUrl,     setArticleUrl]     = useState("");
   const [screenshotFile, setScreenshotFile] = useState<File | null>(null);
   const [youtubeUrl,     setYoutubeUrl]     = useState("");

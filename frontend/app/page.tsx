@@ -4,9 +4,12 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { InputTab, AnalyzeResponse } from "@/lib/types";
 import { analyzeText, analyzeArticle, analyzeScreenshot, analyzeYoutube } from "@/lib/api";
-import InputCard from "@/components/InputCard";
-import LoadingState from "@/components/LoadingState";
-import ErrorMessage from "@/components/ErrorMessage";
+import Wordmark      from "@/components/Wordmark";
+import InputCard     from "@/components/InputCard";
+import ExampleChips  from "@/components/ExampleChips";
+import HowItWorks    from "@/components/HowItWorks";
+import LoadingState  from "@/components/LoadingState";
+import ErrorMessage  from "@/components/ErrorMessage";
 import ResultsSection from "@/components/results/ResultsSection";
 
 const ERROR_MESSAGES: Record<InputTab, string> = {
@@ -16,22 +19,21 @@ const ERROR_MESSAGES: Record<InputTab, string> = {
   youtube:    "This video has no captions available — try a different video or paste the transcript as text.",
 };
 
-// Stagger children container
 const pageVariants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.12, delayChildren: 0.1 } },
 };
-
 const itemVariants = {
-  hidden:   { opacity: 0, y: 24 },
-  visible:  { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 260, damping: 28 } },
+  hidden:  { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { type: "spring" as const, stiffness: 260, damping: 28 } },
 };
 
 export default function HomePage() {
-  const [activeTab, setActiveTab] = useState<InputTab>("text");
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
-  const [results,   setResults]   = useState<AnalyzeResponse | null>(null);
+  const [activeTab,    setActiveTab]    = useState<InputTab>("text");
+  const [exampleText,  setExampleText]  = useState<string | undefined>(undefined);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [results,      setResults]      = useState<AnalyzeResponse | null>(null);
 
   const handleSubmit = useCallback(
     async (tab: InputTab, data: { text?: string; url?: string; file?: File }) => {
@@ -66,10 +68,23 @@ export default function HomePage() {
     setResults(null);
   }, []);
 
+  // Clicking an example chip → switch to text tab + pre-fill
+  const handleExample = useCallback((text: string) => {
+    setActiveTab("text");
+    setExampleText(text);
+    setError(null);
+    setResults(null);
+    // Reset the injected value after one render cycle so InputCard can re-receive it
+    setTimeout(() => setExampleText(undefined), 50);
+  }, []);
+
   return (
     <main className="relative min-h-screen bg-paper py-16 px-4 overflow-hidden">
 
-      {/* ── Animated background blobs ──────────────────────────────────── */}
+      {/* ── Fixed wordmark ───────────────────────────────────────────── */}
+      <Wordmark />
+
+      {/* ── Animated background blobs ────────────────────────────────── */}
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden="true">
         <div
           className="blob-1 absolute -top-40 -left-32 w-[500px] h-[500px] rounded-full"
@@ -83,24 +98,32 @@ export default function HomePage() {
           className="blob-3 absolute -bottom-32 left-1/4 w-[380px] h-[380px] rounded-full"
           style={{ background: "radial-gradient(circle, rgba(184,134,47,0.05) 0%, transparent 70%)" }}
         />
+        {/* Large barely-visible magnifying glass watermark */}
+        <svg
+          viewBox="0 0 200 200"
+          className="absolute -bottom-16 -right-16 w-[420px] h-[420px] opacity-[0.025]"
+          fill="none"
+          stroke="#1C1B19"
+          strokeWidth="3"
+          aria-hidden="true"
+        >
+          <circle cx="80" cy="80" r="60" />
+          <line x1="125" y1="125" x2="185" y2="185" strokeLinecap="round" strokeWidth="10" />
+        </svg>
       </div>
 
       <div className="relative mx-auto w-full max-w-[640px] flex flex-col gap-8">
 
-        {/* ── Header — staggered entrance ─────────────────────────────── */}
+        {/* ── Header ───────────────────────────────────────────────────── */}
         <motion.header
-          className="flex flex-col items-center gap-3 text-center"
+          className="flex flex-col items-center gap-3 text-center pt-6"
           variants={pageVariants}
           initial="hidden"
           animate="visible"
         >
-          <motion.p
-            variants={itemVariants}
-            className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted"
-          >
+          <motion.p variants={itemVariants} className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted">
             AI Verification
           </motion.p>
-
           <motion.h1
             variants={itemVariants}
             className="font-fraunces font-semibold text-ink leading-tight"
@@ -108,29 +131,33 @@ export default function HomePage() {
           >
             Is this news real?
           </motion.h1>
-
-          <motion.p
-            variants={itemVariants}
-            className="text-muted text-sm max-w-md leading-relaxed"
-          >
+          <motion.p variants={itemVariants} className="text-muted text-sm max-w-md leading-relaxed">
             This tool checks language patterns, fact-check databases, and source
             credibility together — giving you three independent signals at once.
           </motion.p>
         </motion.header>
 
-        {/* ── Input card ──────────────────────────────────────────────── */}
+        {/* ── Input card ───────────────────────────────────────────────── */}
         <motion.section
           aria-label="Input"
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ type: "spring", stiffness: 220, damping: 26, delay: 0.45 }}
         >
-          <InputCard
-            activeTab={activeTab}
-            onTabChange={handleTabChange}
-            onSubmit={handleSubmit}
-            loading={loading}
-          />
+          {/* Card with elevated shadow — task 5 */}
+          <div className="rounded-2xl" style={{ boxShadow: "0 4px 24px rgba(28,27,25,0.08), 0 1px 4px rgba(28,27,25,0.04)" }}>
+            <InputCard
+              activeTab={activeTab}
+              onTabChange={handleTabChange}
+              onSubmit={handleSubmit}
+              loading={loading}
+              injectedText={exampleText}
+            />
+          </div>
+
+          {/* Try an example chips — task 4 */}
+          <ExampleChips onSelect={handleExample} />
+
           <AnimatePresence mode="wait">
             {error && (
               <motion.div
@@ -146,46 +173,45 @@ export default function HomePage() {
           </AnimatePresence>
         </motion.section>
 
-        {/* ── Loading ─────────────────────────────────────────────────── */}
+        {/* ── Loading ──────────────────────────────────────────────────── */}
         <AnimatePresence>
           {loading && (
-            <motion.div
-              key="loading"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-            >
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
               <LoadingState inputTab={activeTab} />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Results ─────────────────────────────────────────────────── */}
+        {/* ── Results ──────────────────────────────────────────────────── */}
         <AnimatePresence>
           {results && !loading && (
-            <motion.section
-              key="results"
-              aria-label="Results"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.3 }}
-            >
+            <motion.section key="results" aria-label="Results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
               <ResultsSection results={results} />
             </motion.section>
           )}
         </AnimatePresence>
 
-        {/* ── Footer ──────────────────────────────────────────────────── */}
-        <motion.footer
-          className="text-center mt-4"
+        {/* ── How it works ─────────────────────────────────────────────── */}
+        <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 0.8, duration: 0.6 }}
+          transition={{ delay: 0.7, duration: 0.6 }}
+        >
+          <HowItWorks />
+        </motion.div>
+
+        {/* ── Footer — expanded with tech stack line ───────────────────── */}
+        <motion.footer
+          className="text-center flex flex-col gap-1.5 mt-2 pb-8"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.9, duration: 0.6 }}
         >
           <p className="text-tertiary text-xs leading-relaxed">
             AI predictions can be wrong — always verify with trusted sources.
+          </p>
+          <p className="font-mono text-[9px] uppercase tracking-[0.12em] text-tertiary/60">
+            Powered by DistilRoBERTa · Google Fact Check Tools · curated source list
           </p>
         </motion.footer>
 
