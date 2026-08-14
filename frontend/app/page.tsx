@@ -98,18 +98,7 @@ export default function HomePage() {
           className="blob-3 absolute -bottom-32 left-1/4 w-[380px] h-[380px] rounded-full"
           style={{ background: "radial-gradient(circle, rgba(184,134,47,0.05) 0%, transparent 70%)" }}
         />
-        {/* Large barely-visible magnifying glass watermark */}
-        <svg
-          viewBox="0 0 200 200"
-          className="absolute -bottom-16 -right-16 w-[420px] h-[420px] opacity-[0.025]"
-          fill="none"
-          stroke="#1C1B19"
-          strokeWidth="3"
-          aria-hidden="true"
-        >
-          <circle cx="80" cy="80" r="60" />
-          <line x1="125" y1="125" x2="185" y2="185" strokeLinecap="round" strokeWidth="10" />
-        </svg>
+
       </div>
 
       <div className="relative mx-auto w-full max-w-[640px] flex flex-col gap-8">
