@@ -64,6 +64,49 @@ def warm_up() -> None:
         logger.warning("Model warm-up prediction failed (non-fatal): %s", exc)
 
 
+
+def _resolve_label(raw_label: str) -> str:
+    """
+    Map whatever label string the model emits to a canonical 'Fake' or 'Real'.
+
+    Resolution cascade:
+      1. Explicit strings — FAKE / REAL (and lowercase/mixed variants).
+      2. HuggingFace generic LABEL_N — look up the model's id2label config,
+         which maps integer IDs to the human-readable label the fine-tuner set.
+      3. Positional fallback convention — LABEL_0 = Fake, LABEL_1 = Real.
+         This matches the most common convention for binary fake-news classifiers
+         but is only reached if both steps above fail.
+    """
+    upper = raw_label.upper()
+
+    # Step 1: explicit label strings
+    if "FAKE" in upper:
+        return "Fake"
+    if "REAL" in upper:
+        return "Real"
+
+    # Step 2: generic LABEL_N → check the model's id2label config
+    if _classifier is not None and "LABEL_" in upper:
+        try:
+            idx = int(raw_label.split("_")[-1])
+            id2label = getattr(_classifier.model.config, "id2label", {})
+            human = id2label.get(idx, "").upper()
+            if "FAKE" in human:
+                return "Fake"
+            if "REAL" in human:
+                return "Real"
+        except (ValueError, AttributeError):
+            pass
+
+    # Step 3: positional fallback — LABEL_0 = Fake, LABEL_1 = Real
+    logger.warning(
+        "Could not resolve label '%s' by name or config; using positional fallback "
+        "(LABEL_0=Fake, LABEL_1=Real). Inspect _classifier('test') to verify.",
+        raw_label,
+    )
+    return "Fake" if raw_label == "LABEL_0" else "Real"
+
+
 def predict(text: str) -> dict:
     """
     Classify *text* as Fake or Real.
@@ -79,22 +122,19 @@ def predict(text: str) -> dict:
 
     # The pipeline returns a list of dicts when top_k=None, e.g.:
     #   [[{"label": "FAKE", "score": 0.923}, {"label": "REAL", "score": 0.077}]]
+    # OR with HuggingFace generic defaults:
+    #   [[{"label": "LABEL_0", "score": 0.923}, {"label": "LABEL_1", "score": 0.077}]]
     results = _classifier(text, truncation=True, max_length=512)
     # Unwrap the outer list produced by the pipeline
     label_scores = results[0] if isinstance(results[0], list) else results
 
-    # Build a mapping label → score for easy lookup
-    score_map = {item["label"].upper(): item["score"] for item in label_scores}
+    # Sort by score descending — the winner is always first, regardless of label names.
+    # This avoids the silent failure where both .get("FAKE") and .get("REAL") return 0.0
+    # when the model emits generic LABEL_0/LABEL_1 strings.
+    label_scores_sorted = sorted(label_scores, key=lambda x: x["score"], reverse=True)
+    winning = label_scores_sorted[0]
 
-    # Normalise labels — the model uses FAKE/REAL (uppercase)
-    fake_score = score_map.get("FAKE", 0.0)
-    real_score = score_map.get("REAL", 0.0)
-
-    if fake_score >= real_score:
-        label = "Fake"
-        confidence = round(fake_score * 100)
-    else:
-        label = "Real"
-        confidence = round(real_score * 100)
+    label = _resolve_label(winning["label"])
+    confidence = round(winning["score"] * 100)
 
     return {"label": label, "confidence": confidence}

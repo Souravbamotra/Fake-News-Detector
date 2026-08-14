@@ -55,7 +55,11 @@ def extract_article(url: str) -> dict:
     # Parse domain first so we can always return it even on partial failure
     try:
         parsed = urllib.parse.urlparse(url)
-        domain = parsed.netloc.lstrip("www.") if parsed.netloc else None
+        # NOTE: do NOT use lstrip("www.") — it strips individual characters from
+        # a set, not the prefix string, mangling domains like washingtonpost.com
+        # or wsj.com that start with 'w'. Use a startswith guard instead.
+        netloc = parsed.netloc
+        domain = netloc[4:] if netloc.startswith("www.") else netloc if netloc else None
     except Exception:
         domain = None
 
