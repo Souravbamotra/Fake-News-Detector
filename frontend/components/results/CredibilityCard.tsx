@@ -1,5 +1,6 @@
 "use client";
 
+import { motion } from "framer-motion";
 import { SourceCredibility, isCredibilityOk, isSignalError } from "@/lib/types";
 
 interface CredibilityCardProps {
@@ -7,16 +8,16 @@ interface CredibilityCardProps {
 }
 
 const TIER_STYLES: Record<string, { label: string; className: string }> = {
-  high:          { label: "High credibility",   className: "bg-real/10 text-real border border-real/25" },
-  medium:        { label: "Medium credibility",  className: "bg-amber/10 text-amber border border-amber/25" },
-  low:           { label: "Low credibility",    className: "bg-fake/10 text-fake border border-fake/25" },
-  unrated:       { label: "Unrated",            className: "bg-muted/10 text-muted border border-muted/25" },
-  not_available: { label: "N/A",                className: "bg-hairline text-muted border border-hairline" },
+  high:          { label: "High credibility",  className: "bg-real/10 text-real border border-real/25" },
+  medium:        { label: "Medium credibility", className: "bg-amber/10 text-amber border border-amber/25" },
+  low:           { label: "Low credibility",   className: "bg-fake/10 text-fake border border-fake/25" },
+  unrated:       { label: "Unrated",           className: "bg-muted/10 text-muted border border-muted/25" },
+  not_available: { label: "N/A",               className: "bg-hairline text-muted border border-hairline" },
 };
 
 export default function CredibilityCard({ result }: CredibilityCardProps) {
   const isError = isSignalError(result);
-  const isOk = isCredibilityOk(result);
+  const isOk    = isCredibilityOk(result);
 
   return (
     <div className="bg-card border border-hairline rounded-2xl p-5">
@@ -34,17 +35,25 @@ export default function CredibilityCard({ result }: CredibilityCardProps) {
         ) : (
           <div className="flex items-center gap-3 flex-wrap">
             {result.domain && (
-              <span className="font-mono text-xs text-ink tracking-wide">
+              <motion.span
+                className="font-mono text-xs text-ink tracking-wide"
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+              >
                 {result.domain}
-              </span>
+              </motion.span>
             )}
-            <span
+            <motion.span
               className={`font-mono text-[10px] uppercase tracking-[0.1em] px-2.5 py-1 rounded-full ${
                 TIER_STYLES[result.tier]?.className ?? TIER_STYLES.unrated.className
               }`}
+              initial={{ opacity: 0, scale: 0.7 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ type: "spring", stiffness: 350, damping: 20, delay: 0.1 }}
             >
               {TIER_STYLES[result.tier]?.label ?? result.tier}
-            </span>
+            </motion.span>
           </div>
         )
       ) : null}

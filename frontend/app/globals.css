@@ -17,14 +17,9 @@
 }
 
 /* ── Base reset ────────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-}
+*, *::before, *::after { box-sizing: border-box; }
 
-html {
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
 
 body {
   background-color: #FAFAF8;
@@ -32,6 +27,7 @@ body {
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 15px;
   line-height: 1.6;
+  overflow-x: hidden;
 }
 
 /* ── Focus rings ───────────────────────────────────────────────────────────── */
@@ -46,13 +42,51 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #E4E1DA; border-radius: 3px; }
 
-/* ── Textarea ──────────────────────────────────────────────────────────────── */
-textarea {
-  resize: none;
-  font-family: inherit;
+/* ── Textarea / Input ──────────────────────────────────────────────────────── */
+textarea { resize: none; font-family: inherit; }
+textarea::placeholder, input::placeholder { color: #B7B2A5; }
+
+/* ── Background blob animations ────────────────────────────────────────────── */
+@keyframes blob-drift-1 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  30%       { transform: translate(40px, -60px) scale(1.08); }
+  60%       { transform: translate(-30px, 30px) scale(0.95); }
+}
+@keyframes blob-drift-2 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  40%       { transform: translate(-50px, 40px) scale(1.05); }
+  70%       { transform: translate(35px, -25px) scale(0.97); }
+}
+@keyframes blob-drift-3 {
+  0%, 100% { transform: translate(0px, 0px) scale(1); }
+  25%       { transform: translate(25px, 50px) scale(1.12); }
+  75%       { transform: translate(-40px, -30px) scale(0.92); }
 }
 
-textarea::placeholder,
-input::placeholder {
-  color: #B7B2A5;
+.blob-1 { animation: blob-drift-1 18s ease-in-out infinite; }
+.blob-2 { animation: blob-drift-2 22s ease-in-out infinite; }
+.blob-3 { animation: blob-drift-3 26s ease-in-out infinite; }
+
+/* ── Shimmer keyframe (submit button) ──────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.btn-shimmer {
+  background: linear-gradient(
+    90deg,
+    #1C1B19 0%,
+    #1C1B19 40%,
+    #4a4845 50%,
+    #1C1B19 60%,
+    #1C1B19 100%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2.4s linear infinite;
+}
+
+/* ── Reduced motion overrides ──────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .blob-1, .blob-2, .blob-3 { animation: none; }
+  .btn-shimmer { animation: none; background: #1C1B19; }
 }

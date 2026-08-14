@@ -2,44 +2,54 @@
 
 import { motion } from "framer-motion";
 import { AnalyzeResponse } from "@/lib/types";
-import VerdictCard from "./VerdictCard";
-import FactCheckCard from "./FactCheckCard";
+import VerdictCard    from "./VerdictCard";
+import FactCheckCard  from "./FactCheckCard";
 import CredibilityCard from "./CredibilityCard";
 
 interface ResultsSectionProps {
   results: AnalyzeResponse;
 }
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 6 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: "easeOut" as const } },
-};
-
-const containerVariants = {
-  hidden: {},
-  visible: {
-    transition: { staggerChildren: 0.08 },
-  },
-};
+const cards = [
+  { key: "verdict",     Component: VerdictCard,     propKey: "verdict" },
+  { key: "factcheck",   Component: FactCheckCard,   propKey: "result"  },
+  { key: "credibility", Component: CredibilityCard, propKey: "result"  },
+] as const;
 
 export default function ResultsSection({ results }: ResultsSectionProps) {
+  const props = {
+    verdict: results.language_verdict,
+    result:  [results.fact_check, results.source_credibility],
+  };
+
   return (
-    <motion.div
-      className="flex flex-col gap-3 mt-6"
-      variants={containerVariants}
-      initial="hidden"
-      animate="visible"
-      aria-label="Analysis results"
-    >
-      <motion.div variants={cardVariants}>
+    <div className="flex flex-col gap-3 mt-6" aria-label="Analysis results">
+      {/* Verdict */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 26, delay: 0 }}
+      >
         <VerdictCard verdict={results.language_verdict} />
       </motion.div>
-      <motion.div variants={cardVariants}>
+
+      {/* Fact check */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 26, delay: 0.1 }}
+      >
         <FactCheckCard result={results.fact_check} />
       </motion.div>
-      <motion.div variants={cardVariants}>
+
+      {/* Source credibility */}
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: "spring", stiffness: 280, damping: 26, delay: 0.2 }}
+      >
         <CredibilityCard result={results.source_credibility} />
       </motion.div>
-    </motion.div>
+    </div>
   );
 }
