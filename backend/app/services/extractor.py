@@ -23,7 +23,23 @@ from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
 from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
 
+import os
+import shutil
+
 logger = logging.getLogger(__name__)
+
+# ── Configure Tesseract binary path on Windows if not in PATH ─────────────────
+if os.name == "nt" and not shutil.which("tesseract"):
+    _tesseract_common_paths = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expandvars(r"%LOCALAPPDATA%\Programs\Tesseract-OCR\tesseract.exe"),
+    ]
+    for _p in _tesseract_common_paths:
+        if os.path.exists(_p):
+            pytesseract.pytesseract.tesseract_cmd = _p
+            logger.info("Configured Tesseract binary path: %s", _p)
+            break
 
 # ── Timeouts ──────────────────────────────────────────────────────────────────
 ARTICLE_TIMEOUT = 15   # seconds
