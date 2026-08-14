@@ -1,0 +1,58 @@
+@import "tailwindcss";
+
+@theme {
+  --color-paper: #FAFAF8;
+  --color-card: #FFFFFF;
+  --color-ink: #1C1B19;
+  --color-hairline: #E4E1DA;
+  --color-muted: #8A8578;
+  --color-tertiary: #B7B2A5;
+  --color-real: #2F6B4F;
+  --color-fake: #A13D3D;
+  --color-amber: #B8862F;
+
+  --font-fraunces: var(--font-fraunces-var);
+  --font-inter: var(--font-inter-var);
+  --font-mono: var(--font-ibm-plex-mono-var);
+}
+
+/* ── Base reset ────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: #FAFAF8;
+  color: #1C1B19;
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* ── Focus rings ───────────────────────────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid #1C1B19;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Scrollbar ─────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #E4E1DA; border-radius: 3px; }
+
+/* ── Textarea ──────────────────────────────────────────────────────────────── */
+textarea {
+  resize: none;
+  font-family: inherit;
+}
+
+textarea::placeholder,
+input::placeholder {
+  color: #B7B2A5;
+}
