@@ -1,0 +1,29 @@
+# ── Web framework ──────────────────────────────────────────────────────────────
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+python-multipart==0.0.9
+
+# ── Environment & config ───────────────────────────────────────────────────────
+python-dotenv==1.0.1
+
+# ── Language model (CPU-only; the CPU wheel avoids the heavy CUDA build) ──────
+# IMPORTANT: Install torch BEFORE running pip install -r requirements.txt:
+#   pip install torch==2.3.0 --index-url https://download.pytorch.org/whl/cpu
+# This avoids pulling the heavy CUDA wheel from default PyPI.
+# torch is listed here for documentation only — if already installed it is skipped.
+transformers==4.41.2
+# torch==2.3.0  ← install separately via CPU wheel index (see above)
+
+# ── Article extraction ─────────────────────────────────────────────────────────
+trafilatura==1.10.0
+requests==2.32.3
+
+# ── Screenshot OCR ────────────────────────────────────────────────────────────
+pytesseract==0.3.10
+Pillow==10.3.0
+
+# ── YouTube captions ──────────────────────────────────────────────────────────
+youtube-transcript-api==0.6.2
+
+# ── Validation / typing helpers ───────────────────────────────────────────────
+pydantic==2.7.3
