@@ -34,14 +34,16 @@ API_KEY = os.getenv("GOOGLE_FACT_CHECK_API_KEY", "")
 REQUEST_TIMEOUT = 10  # seconds
 
 
-def _extract_claim(text: str, max_chars: int = 200) -> str:
+def _extract_claim(text: str, max_chars: int = 400) -> str:
     """
     Extract a short, searchable claim from a longer text.
 
     Heuristic order:
       1. If there's a clear title/headline (first line followed by a blank line),
          use that first line.
-      2. Otherwise take the first 1-2 sentences, trimmed to max_chars.
+      2. Otherwise take the first 1-3 sentences, trimmed to max_chars.
+         A higher limit helps with YouTube transcripts which have no headline
+         and need more context for a meaningful fact-check query.
     """
     text = text.strip()
 
@@ -51,9 +53,9 @@ def _extract_claim(text: str, max_chars: int = 200) -> str:
     if 10 < len(first_line) <= max_chars:
         return first_line
 
-    # Strategy 2: first 1-2 sentences
+    # Strategy 2: first 1-3 sentences
     sentences = re.split(r"(?<=[.!?])\s+", text)
-    claim = " ".join(sentences[:2])
+    claim = " ".join(sentences[:3])
     return textwrap.shorten(claim, width=max_chars, placeholder="…")
 
 

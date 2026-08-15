@@ -30,7 +30,9 @@ from fastapi.responses import JSONResponse
 
 from app.models import AnalyzeRequest, AnalyzeResponse
 from app.services import credibility_service, factcheck_service, lm_service
+from app.services import youtube_channel_service
 from app.services.extractor import ExtractionError, extract_article, extract_screenshot, extract_youtube
+from app.services.extractor import _parse_video_id
 
 logger = logging.getLogger(__name__)
 
@@ -66,14 +68,19 @@ def _run_credibility(domain: Optional[str]) -> dict:
         return {"domain": domain, "error": "Credibility service unavailable.", "tier": "not_available"}
 
 
-def _build_response(text: str, domain: Optional[str]) -> dict:
+def _build_response(text: str, domain: Optional[str], cred_override: Optional[dict] = None) -> dict:
     """
     Run all three signals and assemble the combined response.
     Each signal is independent — failure of one does not block the others.
+
+    Args:
+        cred_override: if provided, use this dict directly as the
+                       source_credibility value (e.g. YouTube channel result)
+                       instead of calling credibility_service.check(domain).
     """
-    lm_result = _run_lm(text)
-    fc_result = _run_factcheck(text)
-    cred_result = _run_credibility(domain)
+    lm_result   = _run_lm(text)
+    fc_result   = _run_factcheck(text)
+    cred_result = cred_override if cred_override is not None else _run_credibility(domain)
 
     return {
         "extracted_text": text,
@@ -144,8 +151,16 @@ async def analyze_endpoint(body: AnalyzeRequest):
                 detail="This video has no captions available — transcript extraction isn't supported yet.",
             )
         text = extracted["text"]
-        # No domain from YouTube URLs — credibility will be "not_available"
-        domain = None
+
+        # Resolve the actual YouTube channel and its credibility tier
+        # via the YouTube Data API v3 (gracefully falls back on failure).
+        video_id = _parse_video_id(str(body.youtube_url))
+        if video_id:
+            cred_override = youtube_channel_service.check_channel(video_id)
+        else:
+            cred_override = {"domain": "youtube.com", "channel": None, "tier": "youtube_unverified"}
+
+        return _build_response(text, domain=None, cred_override=cred_override)
 
     elif body.input_type == "screenshot":
         raise HTTPException(

@@ -21,7 +21,15 @@ import requests
 import trafilatura
 from PIL import Image, ImageEnhance, ImageFilter
 import pytesseract
-from youtube_transcript_api import YouTubeTranscriptApi, TranscriptsDisabled, NoTranscriptFound
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_transcript_api._errors import (
+    TranscriptsDisabled,
+    NoTranscriptFound,
+    VideoUnavailable,
+    RequestBlocked,
+    IpBlocked,
+    YouTubeTranscriptApiException,
+)
 
 import os
 import shutil
@@ -249,8 +257,9 @@ def extract_youtube(url: str) -> dict:
     Raises:
         ExtractionError with a user-friendly message.
 
-    Future enhancement:
-        If no captions exist, consider Whisper ASR for audio transcription.
+    Note:
+        Uses youtube-transcript-api v1.x instance-based API.
+        Future enhancement: if no captions exist, consider Whisper ASR.
         Not implemented here — too heavy for free-tier hosting (Render/Railway).
     """
     video_id = _parse_video_id(url)
@@ -260,33 +269,80 @@ def extract_youtube(url: str) -> dict:
             "Make sure the URL looks like https://youtube.com/watch?v=XXXXXXXXXXX"
         )
 
+    # v1.x requires an instance; static get_transcript() was removed.
+    ytt_api = YouTubeTranscriptApi()
+
+    fetched = None
+
+    # --- Primary: try preferred English captions first ---
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(
+        fetched = ytt_api.fetch(
             video_id,
-            languages=["en", "en-US", "en-GB"],  # prefer English; fallback to any below
+            languages=["en", "en-US", "en-GB"],
         )
     except (TranscriptsDisabled, NoTranscriptFound):
-        # Try fetching any available language as a fallback
+        # Fall through to the language-agnostic fallback below
+        pass
+    except (RequestBlocked, IpBlocked) as exc:
+        logger.warning("YouTube blocked request for %s: %s", video_id, exc)
+        raise ExtractionError(
+            "YouTube is temporarily blocking transcript requests from this server. "
+            "Please try again in a few minutes."
+        ) from exc
+    except VideoUnavailable as exc:
+        logger.warning("YouTube video unavailable %s: %s", video_id, exc)
+        raise ExtractionError(
+            "This video is unavailable or private — captions cannot be retrieved."
+        ) from exc
+    except YouTubeTranscriptApiException as exc:
+        logger.warning("YouTube transcript API error for %s: %s", video_id, exc)
+        raise ExtractionError(
+            "Couldn't retrieve captions for this video. "
+            "Please check the URL and try again."
+        ) from exc
+    except Exception as exc:
+        logger.warning("Unexpected YouTube transcript error for %s: %s", video_id, exc)
+        raise ExtractionError(
+            "An unexpected error occurred while fetching the transcript."
+        ) from exc
+
+    # --- Fallback: any available language ---
+    if fetched is None:
         try:
-            transcripts = YouTubeTranscriptApi.list_transcripts(video_id)
-            transcript_list = next(iter(transcripts)).fetch()
-        except Exception:
+            transcript_list_obj = ytt_api.list(video_id)
+            # Grab the first available transcript regardless of language
+            first_transcript = next(iter(transcript_list_obj))
+            fetched = first_transcript.fetch()
+        except StopIteration:
             raise ExtractionError(
                 "This video has no captions available — transcript extraction isn't supported yet."
             )
-    except Exception as exc:
-        logger.warning("YouTube transcript API error for %s: %s", video_id, exc)
-        raise ExtractionError(
-            "This video has no captions available — transcript extraction isn't supported yet."
-        ) from exc
+        except (RequestBlocked, IpBlocked) as exc:
+            logger.warning("YouTube blocked request for %s: %s", video_id, exc)
+            raise ExtractionError(
+                "YouTube is temporarily blocking transcript requests from this server. "
+                "Please try again in a few minutes."
+            ) from exc
+        except Exception as exc:
+            logger.warning("YouTube transcript fallback failed for %s: %s", video_id, exc)
+            raise ExtractionError(
+                "This video has no captions available — transcript extraction isn't supported yet."
+            ) from exc
 
-    if not transcript_list:
+    if not fetched:
         raise ExtractionError(
             "This video has no captions available — transcript extraction isn't supported yet."
         )
 
-    # Stitch caption segments into a single readable block of text
-    text = " ".join(segment.get("text", "") for segment in transcript_list)
+    # Stitch caption snippets into a single readable block of text.
+    # v1.x: each element is a FetchedTranscriptSnippet with a .text attribute,
+    # not a plain dict. We support both for safety.
+    def _snippet_text(segment) -> str:
+        if hasattr(segment, "text"):
+            return segment.text  # v1.x FetchedTranscriptSnippet
+        return segment.get("text", "")  # legacy dict (v0.x)
+
+    text = " ".join(_snippet_text(s) for s in fetched)
     text = text.strip()
 
     if len(text) < 20:

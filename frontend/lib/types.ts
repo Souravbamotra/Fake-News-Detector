@@ -25,7 +25,8 @@ export interface FactCheckEmpty {
 
 export interface SourceCredibilityOk {
   domain: string | null;
-  tier: "high" | "medium" | "low" | "unrated" | "not_available";
+  channel?: string | null;
+  tier: "high" | "medium" | "low" | "unrated" | "youtube" | "youtube_unverified" | "not_available";
 }
 
 export interface SignalError {
