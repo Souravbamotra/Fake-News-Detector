@@ -41,11 +41,19 @@ export type SourceCredibility = SourceCredibilityOk | SignalError;
 
 // ── Full API response ─────────────────────────────────────────────────────────
 
+export interface RelatedArticle {
+  title:  string;
+  source: string;
+  url:    string;
+}
+
 export interface AnalyzeResponse {
-  extracted_text: string;
-  language_verdict: LanguageVerdict;
-  fact_check: FactCheckResult;
+  extracted_text:    string;
+  article_summary?:  string | null;
+  language_verdict:  LanguageVerdict;
+  fact_check:        FactCheckResult;
   source_credibility: SourceCredibility;
+  related_articles?: RelatedArticle[];
 }
 
 // ── Input tab identifiers ─────────────────────────────────────────────────────

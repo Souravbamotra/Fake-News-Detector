@@ -31,6 +31,7 @@ from fastapi.responses import JSONResponse
 from app.models import AnalyzeRequest, AnalyzeResponse
 from app.services import credibility_service, factcheck_service, lm_service
 from app.services import youtube_channel_service
+from app.services import summary_service, news_search_service
 from app.services.extractor import ExtractionError, extract_article, extract_screenshot, extract_youtube
 from app.services.extractor import _parse_video_id
 
@@ -70,7 +71,7 @@ def _run_credibility(domain: Optional[str]) -> dict:
 
 def _build_response(text: str, domain: Optional[str], cred_override: Optional[dict] = None) -> dict:
     """
-    Run all three signals and assemble the combined response.
+    Run all signals and assemble the combined response.
     Each signal is independent — failure of one does not block the others.
 
     Args:
@@ -82,11 +83,27 @@ def _build_response(text: str, domain: Optional[str], cred_override: Optional[di
     fc_result   = _run_factcheck(text)
     cred_result = cred_override if cred_override is not None else _run_credibility(domain)
 
+    # Summary — extractive, always fast
+    try:
+        article_summary = summary_service.summarise(text)
+    except Exception as exc:
+        logger.warning("Summary service failed: %s", exc)
+        article_summary = None
+
+    # Related articles — Google News RSS, best-effort
+    try:
+        related = news_search_service.search(text, exclude_domain=domain)
+    except Exception as exc:
+        logger.warning("News search service failed: %s", exc)
+        related = []
+
     return {
-        "extracted_text": text,
-        "language_verdict": lm_result,
-        "fact_check": fc_result,
+        "extracted_text":    text,
+        "article_summary":   article_summary,
+        "language_verdict":  lm_result,
+        "fact_check":        fc_result,
         "source_credibility": cred_result,
+        "related_articles":  related,
     }
 
 
