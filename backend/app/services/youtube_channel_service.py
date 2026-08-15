@@ -144,8 +144,10 @@ def _fetch_channel_details(channel_id: str) -> dict | None:
         snippet     = item.get("snippet", {})
         topic_data  = item.get("topicDetails", {})
 
-        # Subscriber count — some channels hide it
-        hidden = stats.get("hiddenSubscriberCount", False)
+        # Subscriber count — some large/official channels hide it.
+        # We store both the count and the hidden flag so the scorer
+        # can treat hidden-sub channels differently.
+        hidden    = stats.get("hiddenSubscriberCount", False)
         sub_count = 0 if hidden else int(stats.get("subscriberCount", 0))
 
         # Channel age
@@ -158,9 +160,10 @@ def _fetch_channel_details(channel_id: str) -> dict | None:
         topic_categories = topic_data.get("topicCategories", [])
 
         return {
-            "subscriberCount":   sub_count,
-            "publishedAt":       published_at,
-            "topicCategories":   topic_categories,
+            "subscriberCount":        sub_count,
+            "subscribersHidden":      hidden,   # True for many large channels
+            "publishedAt":            published_at,
+            "topicCategories":        topic_categories,
         }
     except Exception as exc:
         logger.warning("YouTube channel details fetch failed for %s: %s", channel_id, exc)
@@ -172,7 +175,7 @@ def _fetch_channel_details(channel_id: str) -> dict | None:
 def _score_channel(channel_title: str, details: dict | None) -> str:
     """
     Compute a credibility tier from channel metadata.
-    Returns "high" | "medium" | "youtube_unverified".
+    Returns "high" | "medium" | "low" | "youtube_unverified".
     """
     # Blocklist check (takes priority over everything)
     if channel_title.lower().strip() in _BLOCKLIST:
@@ -181,9 +184,10 @@ def _score_channel(channel_title: str, details: dict | None) -> str:
     if details is None:
         return "youtube_unverified"
 
-    subs        = details["subscriberCount"]
-    published   = details["publishedAt"]
-    topics      = " ".join(details["topicCategories"]).lower()
+    subs            = details["subscriberCount"]
+    subs_hidden     = details.get("subscribersHidden", False)
+    published       = details["publishedAt"]
+    topics          = " ".join(details["topicCategories"]).lower()
 
     # Channel age in years
     if published:
@@ -197,12 +201,18 @@ def _score_channel(channel_title: str, details: dict | None) -> str:
     is_trusted  = any(kw in topics for kw in _TRUSTED_KEYWORDS)
 
     logger.info(
-        "Channel scoring: title=%r subs=%d age=%.1fy news=%s politics=%s trusted=%s topics=%r",
-        channel_title, subs, age_years, is_news, is_politics, is_trusted,
+        "Channel scoring: title=%r subs=%s age=%.1fy news=%s politics=%s trusted=%s topics=%r",
+        channel_title,
+        "hidden" if subs_hidden else subs,
+        age_years, is_news, is_politics, is_trusted,
         details["topicCategories"],
     )
 
     if is_news:
+        # If subscribers are hidden, many large established outlets do this
+        # (BBC, Reuters, Al Jazeera …). Rely on topic + age alone.
+        if subs_hidden:
+            return "high" if age_years >= 2 else "medium"
         if subs >= 1_000_000 and age_years >= 2:
             return "high"
         if subs >= 100_000:
@@ -210,6 +220,9 @@ def _score_channel(channel_title: str, details: dict | None) -> str:
         return "youtube_unverified"
 
     if is_politics or is_trusted:
+        if subs_hidden:
+            # Hidden subs + politics/trusted topic + old channel → medium
+            return "medium" if age_years >= 1 else "youtube_unverified"
         if subs >= 500_000:
             return "medium"
         return "youtube_unverified"
