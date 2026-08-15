@@ -69,23 +69,27 @@ def _run_credibility(domain: Optional[str]) -> dict:
         return {"domain": domain, "error": "Credibility service unavailable.", "tier": "not_available"}
 
 
-def _build_response(text: str, domain: Optional[str], cred_override: Optional[dict] = None) -> dict:
+def _build_response(
+    text: str,
+    domain: Optional[str],
+    title: Optional[str] = None,
+    cred_override: Optional[dict] = None,
+) -> dict:
     """
     Run all signals and assemble the combined response.
     Each signal is independent — failure of one does not block the others.
 
     Args:
-        cred_override: if provided, use this dict directly as the
-                       source_credibility value (e.g. YouTube channel result)
-                       instead of calling credibility_service.check(domain).
+        title:         Article/video title — used as the primary summary line.
+        cred_override: If provided, use this dict directly as source_credibility.
     """
     lm_result   = _run_lm(text)
     fc_result   = _run_factcheck(text)
     cred_result = cred_override if cred_override is not None else _run_credibility(domain)
 
-    # Summary — extractive, always fast
+    # Summary — short topic line, title-first
     try:
-        article_summary = summary_service.summarise(text)
+        article_summary = summary_service.summarise(text, title=title)
     except Exception as exc:
         logger.warning("Summary service failed: %s", exc)
         article_summary = None
@@ -98,12 +102,12 @@ def _build_response(text: str, domain: Optional[str], cred_override: Optional[di
         related = []
 
     return {
-        "extracted_text":    text,
-        "article_summary":   article_summary,
-        "language_verdict":  lm_result,
-        "fact_check":        fc_result,
+        "extracted_text":     text,
+        "article_summary":    article_summary,
+        "language_verdict":   lm_result,
+        "fact_check":         fc_result,
         "source_credibility": cred_result,
-        "related_articles":  related,
+        "related_articles":   related,
     }
 
 
@@ -149,8 +153,10 @@ async def analyze_endpoint(body: AnalyzeRequest):
                 status_code=422,
                 detail="Couldn't extract this article automatically — try pasting the text directly.",
             )
-        text = extracted["text"]
+        text   = extracted["text"]
+        title  = extracted.get("title")
         domain = extracted.get("domain")
+        return _build_response(text, domain, title=title)
 
     elif body.input_type == "youtube_url":
         if not body.youtube_url:
@@ -177,7 +183,7 @@ async def analyze_endpoint(body: AnalyzeRequest):
         else:
             cred_override = {"domain": "youtube.com", "channel": None, "tier": "youtube_unverified"}
 
-        return _build_response(text, domain=None, cred_override=cred_override)
+        return _build_response(text, domain=None, title=None, cred_override=cred_override)
 
     elif body.input_type == "screenshot":
         raise HTTPException(
