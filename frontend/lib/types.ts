@@ -39,6 +39,20 @@ export type LanguageVerdict = LanguageVerdictOk | SignalError;
 export type FactCheckResult = FactCheckOk | FactCheckEmpty | SignalError;
 export type SourceCredibility = SourceCredibilityOk | SignalError;
 
+// ── Truth Score composite ───────────────────────────────────────────────────
+
+export interface TruthScoreBreakdown {
+  source_reliability: number | null;
+  language_confidence: number | null;
+  fact_check_match: number | null;
+}
+
+export interface TruthScore {
+  overall: number;
+  breakdown: TruthScoreBreakdown;
+  label: string;
+}
+
 // ── Full API response ─────────────────────────────────────────────────────────
 
 export interface RelatedArticle {
@@ -48,12 +62,13 @@ export interface RelatedArticle {
 }
 
 export interface AnalyzeResponse {
-  extracted_text:    string;
-  article_summary?:  string | null;
-  language_verdict:  LanguageVerdict;
-  fact_check:        FactCheckResult;
+  extracted_text:     string;
+  article_summary?:   string | null;
+  language_verdict:   LanguageVerdict;
+  fact_check:         FactCheckResult;
   source_credibility: SourceCredibility;
-  related_articles?: RelatedArticle[];
+  related_articles?:  RelatedArticle[];
+  truth_score?:       TruthScore | null;
 }
 
 // ── Input tab identifiers ─────────────────────────────────────────────────────

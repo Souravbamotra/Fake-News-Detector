@@ -31,7 +31,7 @@ from fastapi.responses import JSONResponse
 from app.models import AnalyzeRequest, AnalyzeResponse
 from app.services import credibility_service, factcheck_service, lm_service
 from app.services import youtube_channel_service
-from app.services import summary_service, news_search_service
+from app.services import summary_service, news_search_service, truth_score_service
 from app.services.extractor import ExtractionError, extract_article, extract_screenshot, extract_youtube
 from app.services.extractor import _parse_video_id
 
@@ -87,6 +87,9 @@ def _build_response(
     fc_result   = _run_factcheck(text)
     cred_result = cred_override if cred_override is not None else _run_credibility(domain)
 
+    # Truth score — weighted composite across the three signals
+    truth_score = truth_score_service.calculate_truth_score(lm_result, fc_result, cred_result)
+
     # Summary — short topic line, title-first
     try:
         article_summary = summary_service.summarise(text, title=title)
@@ -108,6 +111,7 @@ def _build_response(
         "fact_check":         fc_result,
         "source_credibility": cred_result,
         "related_articles":   related,
+        "truth_score":        truth_score,
     }
 
 

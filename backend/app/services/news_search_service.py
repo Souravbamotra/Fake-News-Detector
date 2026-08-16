@@ -50,8 +50,8 @@ def _build_query(text: str, max_chars: int = 120) -> str:
 def _extract_source_domain(url: str) -> str:
     """Extract domain from a URL for deduplication."""
     try:
-        netloc = urllib.parse.urlparse(url).netloc
-        return netloc.lstrip("www.").lower()
+        netloc = urllib.parse.urlparse(url).netloc.lower()
+        return netloc[4:] if netloc.startswith("www.") else netloc
     except Exception:
         return ""
 

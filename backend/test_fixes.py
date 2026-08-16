@@ -119,12 +119,78 @@ def test_credibility():
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Truth Score calculation
+# ─────────────────────────────────────────────────────────────────────────────
+
+def test_truth_score():
+    print("\n-- Truth score calculation (truth_score_service) -------------")
+    try:
+        from app.services.truth_score_service import calculate_truth_score
+    except ModuleNotFoundError:
+        print("SKIP: dependencies not installed.")
+        return True
+
+    # Case 1: All signals positive
+    res1 = calculate_truth_score(
+        {"label": "Real", "confidence": 80},
+        {"found": True, "rating": "Accurate"},
+        {"tier": "high", "domain": "reuters.com"},
+    )
+    assert res1 is not None
+    assert res1["overall"] == 88, f"Expected 88, got {res1['overall']}"
+    assert res1["label"] == "Highly Reliable"
+    assert res1["breakdown"]["source_reliability"] == 90
+    assert res1["breakdown"]["language_confidence"] == 80
+    assert res1["breakdown"]["fact_check_match"] == 95
+    print("✅ Case 1: High reliability score (all signals positive) → 88 (Highly Reliable)")
+
+    # Case 2: Fake news with debunked fact-check
+    res2 = calculate_truth_score(
+        {"label": "Fake", "confidence": 90},
+        {"found": True, "rating": "False / Misleading"},
+        {"tier": "low", "domain": "infowars.com"},
+    )
+    assert res2 is not None
+    assert res2["overall"] == 13, f"Expected 13, got {res2['overall']}"
+    assert res2["label"] == "Highly Unreliable"
+    assert res2["breakdown"]["source_reliability"] == 20
+    assert res2["breakdown"]["language_confidence"] == 10
+    assert res2["breakdown"]["fact_check_match"] == 10
+    print("✅ Case 2: Fake news debunked → 13 (Highly Unreliable)")
+
+    # Case 3: Re-normalization when fact-check signal has error
+    res3 = calculate_truth_score(
+        {"label": "Real", "confidence": 74},
+        {"found": False, "error": "Quota exceeded"},
+        {"tier": "high", "domain": "apnews.com"},
+    )
+    assert res3 is not None
+    assert res3["breakdown"]["fact_check_match"] is None
+    assert res3["overall"] == 81, f"Expected 81, got {res3['overall']}"
+    assert res3["label"] == "Highly Reliable"
+    print("✅ Case 3: Re-normalization on error signal → 81 (fact_check_match is None)")
+
+    # Case 4: All signals error out → None
+    res4 = calculate_truth_score(
+        {"error": "LM down"},
+        {"found": False, "error": "FC down"},
+        {"error": "Cred down", "tier": "not_available"},
+    )
+    assert res4 is None
+    print("✅ Case 4: All signals error → None")
+
+    print("\n4/4 truth score tests passed")
+    return True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
     all_passed = True
     all_passed &= test_domain_stripping()
     all_passed &= test_label_resolution()
     all_passed &= test_credibility()
+    all_passed &= test_truth_score()
 
     print("\n" + ("=" * 55))
     if all_passed:

@@ -86,6 +86,22 @@ class SourceCredibility(BaseModel):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
+# Truth Score composite
+# ──────────────────────────────────────────────────────────────────────────────
+
+class TruthScoreBreakdown(BaseModel):
+    source_reliability: Optional[int] = Field(None, description="Score 0-100 or null if signal failed")
+    language_confidence: Optional[int] = Field(None, description="Score 0-100 or null if signal failed")
+    fact_check_match: Optional[int] = Field(None, description="Score 0-100 or null if signal failed")
+
+
+class TruthScore(BaseModel):
+    overall: int = Field(..., ge=0, le=100, description="Composite score 0-100")
+    breakdown: TruthScoreBreakdown
+    label: str = Field(..., description="Human readable reliability label")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
 # Combined /analyze endpoint
 # ──────────────────────────────────────────────────────────────────────────────
 
@@ -104,9 +120,12 @@ class AnalyzeRequest(BaseModel):
 
 class AnalyzeResponse(BaseModel):
     extracted_text: str
+    article_summary: Optional[str] = None
     language_verdict: Union[LanguageVerdict, dict]   # dict used for error shape
     fact_check: Union[FactCheckResult, dict]
     source_credibility: Union[SourceCredibility, dict]
+    related_articles: Optional[list[dict]] = None
+    truth_score: Optional[TruthScore] = None
 
 
 # ──────────────────────────────────────────────────────────────────────────────

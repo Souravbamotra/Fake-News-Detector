@@ -101,7 +101,7 @@ export default function HomePage() {
 
       </div>
 
-      <div className="relative mx-auto w-full max-w-[640px] flex flex-col gap-8">
+      <div className="relative mx-auto w-full max-w-[1000px] flex flex-col gap-10">
 
         {/* ── Header ───────────────────────────────────────────────────── */}
         <motion.header
@@ -126,59 +126,62 @@ export default function HomePage() {
           </motion.p>
         </motion.header>
 
-        {/* ── Input card ───────────────────────────────────────────────── */}
-        <motion.section
-          aria-label="Input"
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 220, damping: 26, delay: 0.45 }}
-        >
-          {/* Card with elevated shadow — task 5 */}
-          <div className="rounded-2xl" style={{ boxShadow: "0 4px 24px rgba(28,27,25,0.08), 0 1px 4px rgba(28,27,25,0.04)" }}>
-            <InputCard
-              activeTab={activeTab}
-              onTabChange={handleTabChange}
-              onSubmit={handleSubmit}
-              loading={loading}
-              injectedText={exampleText}
-            />
-          </div>
+        {/* ── Center interaction column (Input, Loading, Error, Results) ── */}
+        <div className="mx-auto w-full max-w-[640px] flex flex-col gap-6">
+          {/* ── Input card ───────────────────────────────────────────────── */}
+          <motion.section
+            aria-label="Input"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 220, damping: 26, delay: 0.45 }}
+          >
+            {/* Card with elevated shadow — task 5 */}
+            <div className="rounded-2xl" style={{ boxShadow: "0 4px 24px rgba(28,27,25,0.08), 0 1px 4px rgba(28,27,25,0.04)" }}>
+              <InputCard
+                activeTab={activeTab}
+                onTabChange={handleTabChange}
+                onSubmit={handleSubmit}
+                loading={loading}
+                injectedText={exampleText}
+              />
+            </div>
 
-          {/* Try an example chips — task 4 */}
-          <ExampleChips onSelect={handleExample} />
+            {/* Try an example chips — task 4 */}
+            <ExampleChips onSelect={handleExample} />
 
-          <AnimatePresence mode="wait">
-            {error && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: -8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ErrorMessage message={error} />
+            <AnimatePresence mode="wait">
+              {error && (
+                <motion.div
+                  key="error"
+                  initial={{ opacity: 0, y: -8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -8 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <ErrorMessage message={error} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.section>
+
+          {/* ── Loading ──────────────────────────────────────────────────── */}
+          <AnimatePresence>
+            {loading && (
+              <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
+                <LoadingState inputTab={activeTab} />
               </motion.div>
             )}
           </AnimatePresence>
-        </motion.section>
 
-        {/* ── Loading ──────────────────────────────────────────────────── */}
-        <AnimatePresence>
-          {loading && (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
-              <LoadingState inputTab={activeTab} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* ── Results ──────────────────────────────────────────────────── */}
-        <AnimatePresence>
-          {results && !loading && (
-            <motion.section key="results" aria-label="Results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
-              <ResultsSection results={results} />
-            </motion.section>
-          )}
-        </AnimatePresence>
+          {/* ── Results ──────────────────────────────────────────────────── */}
+          <AnimatePresence>
+            {results && !loading && (
+              <motion.section key="results" aria-label="Results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}>
+                <ResultsSection results={results} />
+              </motion.section>
+            )}
+          </AnimatePresence>
+        </div>
 
         {/* ── How it works ─────────────────────────────────────────────── */}
         <motion.div
